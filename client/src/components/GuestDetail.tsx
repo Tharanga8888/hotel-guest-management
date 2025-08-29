@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { pb } from '../lib/pb';
-import type { Guest } from '../types';
+import { GuestAPI } from '../lib/api';
+import { formatDateForInput } from "../lib/date";
+import { alertUpdate, alertDelete, confirmDelete } from "../lib/alerts";
 
 async function fetchGuest(id: string) {
-  return pb.collection('guests').getOne<Guest>(id);
+  return GuestAPI.get(id);
 }
 
 export default function GuestDetail({ id }: { id: string }) {
@@ -34,19 +35,22 @@ export default function GuestDetail({ id }: { id: string }) {
   }, [data]);
 
   const updateMutation = useMutation({
-    mutationFn: async () => pb.collection('guests').update(id, form),
+    mutationFn: async () => GuestAPI.update(id, form),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['guests'] });
       qc.invalidateQueries({ queryKey: ['guest', id] });
-      alert('Guest updated');
+      alertUpdate();
     }
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async () => pb.collection('guests').delete(id),
+    mutationFn: async () => GuestAPI.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['guests'] });
-      window.location.href = '/guests';
+      alertDelete();
+      setTimeout(() => {
+        window.location.href = "/guests";
+      }, 1000);
     }
   });
 
@@ -88,8 +92,14 @@ export default function GuestDetail({ id }: { id: string }) {
       </label>
       <label className="flex flex-col gap-1">
         <span className="text-sm">Date of birth</span>
-        <input type="date" className="rounded-md border px-3 py-2" value={form.date_of_birth} onChange={e=>set('date_of_birth', e.target.value)} />
+        <input
+          type="date"
+          className="rounded-md border px-3 py-2"
+          value={formatDateForInput(form.date_of_birth)}
+          onChange={(e) => set("date_of_birth", e.target.value)}
+        />
       </label>
+
 
       <div className="flex items-center gap-3">
         <button disabled={updateMutation.isPending} className="rounded-md bg-black text-white px-4 py-2">
@@ -97,9 +107,14 @@ export default function GuestDetail({ id }: { id: string }) {
         </button>
         <button
           type="button"
-          onClick={() => { if (confirm('Delete this guest?')) deleteMutation.mutate(); }}
-          className="rounded-md border px-4 py-2 text-red-600"
-        >Delete</button>
+          onClick={async () => {
+            if (await confirmDelete()) {
+              deleteMutation.mutate();
+            }
+          }}
+          className="rounded-md border px-4 py-2 text-red-600">
+          Delete
+        </button>
       </div>
 
       {(updateMutation.isError || deleteMutation.isError) && (

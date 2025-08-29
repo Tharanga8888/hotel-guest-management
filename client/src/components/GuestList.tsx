@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { pb } from '../lib/pb';
-import type { Guest } from '../types';
+import { GuestAPI } from '../lib/api';
+import { alertDelete, confirmDelete } from "../lib/alerts";
 
 
 async function fetchGuests(search: string) {
     const perPage = 50;
     const filter = search ? `first_name ~ "${search}" || last_name ~ "${search}" || email ~ "${search}"`: '';
-    const res = await pb.collection('guests').getList<Guest>(1, perPage, {
+    const res = await GuestAPI.list(1, perPage, {
         sort: '-created',
         filter,
     });
@@ -25,7 +25,7 @@ export default function GuestList() {
     });
 
     const deleteMutation = useMutation({
-        mutationFn: async (id: string) => pb.collection('guests').delete(id),
+        mutationFn: async (id: string) => GuestAPI.delete(id),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['guests'] }),
     });
 
@@ -67,13 +67,24 @@ export default function GuestList() {
                             <tr key={g.id} className="border-t text-sm">
                                 <td className="px-4 py-2">{g.first_name} {g.last_name}</td>
                                 <td className="px-4 py-2">{g.email}</td>
-                                <td className="px-4 py-2">{g.phone ?? '-'}</td>
+                                <td className="px-4 py-2">{g.phone || '----------'}</td>
                                 <td className="px-4 py-2">{new Date(g.created).toLocaleString()}</td>
                                 <td className="px-4 py-2 flex gap-2">
                                     <Link to={`/guests/${g.id}`} className="rounded-md border px-3 py-1">Edit</Link>
-                                    <button onClick={() => { if (confirm('Delete this guest?')) deleteMutation.mutate(g.id); }} 
-                                        className="rounded-md border px-3 py-1 text-red-600"
-                                    >Delete</button>
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            if (await confirmDelete()) {
+                                            deleteMutation.mutate(g.id, {
+                                                onSuccess: () => {
+                                                alertDelete();
+                                                },
+                                            });
+                                            }
+                                        }}
+                                        className="rounded-md border px-3 py-1 text-red-600">
+                                        Delete
+                                    </button>
                                 </td>
                             </tr>
                         ))}

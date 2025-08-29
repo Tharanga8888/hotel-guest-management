@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import type { FormEvent } from "react";
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { pb } from '../lib/pb';
+import { GuestAPI } from '../lib/api';
 import type { Guest } from '../types';
 import { useNavigate } from 'react-router-dom';
+import { alertAdd } from "../lib/alerts";
 
 export default function AddGuestForm() {
   const nav = useNavigate();
@@ -28,11 +29,12 @@ export default function AddGuestForm() {
         address: form.address || undefined,
         date_of_birth: form.date_of_birth || undefined,
       };
-      return pb.collection('guests').create(payload);
+      return GuestAPI.create(payload);
     },
     onSuccess: (rec) => {
       qc.invalidateQueries({ queryKey: ['guests'] });
       nav(`/guests/${rec.id}`);
+      alertAdd();
     },
   });
 
