@@ -6,14 +6,20 @@ import { alertDelete, confirmDelete } from "../lib/alerts";
 
 
 async function fetchGuests(search: string) {
-    const perPage = 50;
-    const filter = search ? `first_name ~ "${search}" || last_name ~ "${search}" || email ~ "${search}"`: '';
-    const res = await GuestAPI.list(1, perPage, {
-        sort: '-created',
-        filter,
-    });
-    return res.items;
+  const allGuests = await GuestAPI.listAll();
+
+  if (!search) return allGuests;
+
+  const lowerSearch = search.toLowerCase();
+  return allGuests.filter(
+    (g) =>
+      g.first_name.toLowerCase().includes(lowerSearch) ||
+      g.last_name.toLowerCase().includes(lowerSearch) ||
+      g.email.toLowerCase().includes(lowerSearch) ||
+      (g.phone?.includes(search) ?? false)
+  );
 }
+
 
 export default function GuestList() {
     const [search, setSearch] = useState('');
