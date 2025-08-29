@@ -66,4 +66,3 @@ npm run dev
 - Before deploying, you must secure PocketBase rules.
 - Error states are surfaced in the UI with SweetAlert2 dialogs.
 - All data-fetching mutations are integrated with TanStack Query for caching and refetch.
-```
